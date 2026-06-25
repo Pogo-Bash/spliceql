@@ -132,6 +132,8 @@ pub enum Expr {
     StringLit(String, Span),
     BoolLit(bool, Span),
     Ident(String, Span),
+    /// A `$name` template variable, resolved at runtime from the VarMap.
+    Var(String, Span),
     Wildcard(Span),
     Unary {
         op: UnaryOp,
@@ -165,6 +167,7 @@ impl Expr {
             | Expr::StringLit(_, s)
             | Expr::BoolLit(_, s)
             | Expr::Ident(_, s)
+            | Expr::Var(_, s)
             | Expr::Wildcard(s)
             | Expr::Unary { span: s, .. }
             | Expr::Binary { span: s, .. }

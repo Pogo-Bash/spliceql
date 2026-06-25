@@ -84,6 +84,10 @@ pub enum TokenKind {
     // ── Identifiers ──
     Ident(String),
 
+    // ── Variables ──
+    /// A `$name` template variable (the name excludes the leading `$`).
+    Var(String),
+
     // ── Comparison operators ──
     Eq,    // =
     NotEq, // !=
@@ -149,6 +153,7 @@ impl fmt::Display for TokenKind {
             Self::FloatLit(v) => write!(f, "{v}"),
             Self::BoolLit(b) => write!(f, "{b}"),
             Self::Ident(name) => f.write_str(name),
+            Self::Var(name) => write!(f, "${name}"),
 
             Self::Eq => f.write_str("="),
             Self::NotEq => f.write_str("!="),

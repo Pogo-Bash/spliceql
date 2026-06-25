@@ -71,6 +71,9 @@ impl<'a> Lexer<'a> {
 
             b'a'..=b'z' | b'A'..=b'Z' | b'_' => self.lex_word(start),
 
+            // `$name` template variable.
+            b'$' => self.lex_var(start),
+
             // ── Operators ──
             b'=' => {
                 self.pos += 1;
@@ -305,6 +308,37 @@ impl<'a> Lexer<'a> {
                 value.push(ch);
             }
         }
+    }
+
+    // ── Template variables ──────────────────────────────────────────────────
+
+    /// Lex `$[a-zA-Z_][a-zA-Z0-9_]*` into a [`TokenKind::Var`] whose payload is
+    /// the name **without** the leading `$`.
+    fn lex_var(&mut self, start: usize) -> Result<Token, LexError> {
+        self.pos += 1; // consume `$`
+        let name_start = self.pos;
+        // First character must be a letter or underscore.
+        match self.peek() {
+            Some(b'a'..=b'z') | Some(b'A'..=b'Z') | Some(b'_') => {}
+            _ => {
+                return Err(LexError::new(
+                    Span::new(start, self.pos),
+                    Some('$'),
+                    "expected a variable name after '$'",
+                ));
+            }
+        }
+        while matches!(
+            self.peek(),
+            Some(b'a'..=b'z') | Some(b'A'..=b'Z') | Some(b'0'..=b'9') | Some(b'_')
+        ) {
+            self.pos += 1;
+        }
+        let name = self.source[name_start..self.pos].to_string();
+        Ok(Token {
+            kind: TokenKind::Var(name),
+            span: Span::new(start, self.pos),
+        })
     }
 
     // ── Number literals ─────────────────────────────────────────────────────

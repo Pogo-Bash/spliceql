@@ -177,7 +177,10 @@ impl Parser {
             .to_string()
     }
 
-    /// `true` for genomic keywords that double as contextual identifiers.
+    /// `true` for keywords that double as contextual identifiers (field/column
+    /// names) when they appear in an expression position. Genomic keywords
+    /// (`reads.depth`, `SELECT coverage`) plus `FILTER` — which is both a `WHERE`
+    /// synonym at clause start and the VCF `filter` column name in expressions.
     fn is_genomic_keyword(kind: &TokenKind) -> bool {
         matches!(
             kind,
@@ -191,10 +194,13 @@ impl Parser {
                 | TokenKind::Coverage
                 | TokenKind::Reads
                 | TokenKind::Header
+                | TokenKind::Filter
         )
     }
 
     /// Consume a string-literal token, returning its value and span.
+    /// Retained as a parsing primitive (paths now go through `expect_path`).
+    #[allow(dead_code)]
     fn expect_string(&mut self, what: &str) -> Result<(String, Span), ParseError> {
         let span = self.peek().span;
         match &self.peek().kind {
@@ -202,6 +208,39 @@ impl Parser {
                 let s = s.clone();
                 self.advance();
                 Ok((s, span))
+            }
+            TokenKind::Eof => Err(ParseError::UnexpectedEof {
+                expected: what.to_string(),
+                span,
+            }),
+            other => {
+                let got = other.clone();
+                Err(ParseError::UnexpectedToken {
+                    expected: what.to_string(),
+                    got,
+                    span,
+                })
+            }
+        }
+    }
+
+    /// Consume a path: either a string literal (`"sample.bam"`) or a `$var`
+    /// (`$bam`). A variable path is stored verbatim as `"$name"`; the compiler
+    /// interns it and the VM resolves the `$`-prefix against the VarMap at
+    /// `OPEN_SOURCE` / `WRITE_INTO` time. This lets `.spq` scripts parameterize
+    /// their inputs and outputs.
+    fn expect_path(&mut self, what: &str) -> Result<(String, Span), ParseError> {
+        let span = self.peek().span;
+        match &self.peek().kind {
+            TokenKind::StringLit(s) => {
+                let s = s.clone();
+                self.advance();
+                Ok((s, span))
+            }
+            TokenKind::Var(name) => {
+                let path = format!("${name}");
+                self.advance();
+                Ok((path, span))
             }
             TokenKind::Eof => Err(ParseError::UnexpectedEof {
                 expected: what.to_string(),
@@ -299,7 +338,7 @@ impl Parser {
             }
         };
 
-        let (path, _) = self.expect_string("a file path string")?;
+        let (path, _) = self.expect_path("a file path string or $variable")?;
 
         let alias = if self.at(TokenKind::As) {
             self.advance();
@@ -343,7 +382,7 @@ impl Parser {
             }
         };
 
-        let (path, _) = self.expect_string("a file path string")?;
+        let (path, _) = self.expect_path("a file path string or $variable")?;
         let end = self.prev_end();
         Ok(IntoClause {
             format,
@@ -569,6 +608,10 @@ impl Parser {
             TokenKind::Ident(name) => {
                 self.advance();
                 Ok(Expr::Ident(name, span))
+            }
+            TokenKind::Var(name) => {
+                self.advance();
+                Ok(Expr::Var(name, span))
             }
             // Genomic keywords act as identifiers in expression position
             // (`reads.depth`, `SELECT coverage`), recovering their spelling.
