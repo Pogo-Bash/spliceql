@@ -1,0 +1,9 @@
+[package]
+name = "spliceql"
+version = "0.1.0"
+edition = "2021"
+description = "SpliceQL query language frontend for CodonSplice — lexer, parser, AST, bytecode compiler"
+license = "MIT"
+
+# Phase 1: no external dependencies. The lexer is pure Rust.
+[dependencies]
