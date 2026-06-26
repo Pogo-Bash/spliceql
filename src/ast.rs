@@ -93,6 +93,10 @@ pub enum Format {
     Fasta,
     Bed,
     Cram,
+    /// Output-only: newline-delimited JSON (one object per record).
+    Json,
+    /// Output-only: tab-separated values with a header row.
+    Tsv,
 }
 
 // ── Operators ────────────────────────────────────────────────────────────────
