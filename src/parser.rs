@@ -189,6 +189,8 @@ impl Parser {
                 | TokenKind::Fasta
                 | TokenKind::Bed
                 | TokenKind::Cram
+                | TokenKind::Json
+                | TokenKind::Tsv
                 | TokenKind::Variants
                 | TokenKind::Cnv
                 | TokenKind::Coverage
@@ -779,6 +781,8 @@ impl Parser {
             TokenKind::Fasta => Format::Fasta,
             TokenKind::Bed => Format::Bed,
             TokenKind::Cram => Format::Cram,
+            TokenKind::Json => Format::Json,
+            TokenKind::Tsv => Format::Tsv,
             _ => return None,
         })
     }

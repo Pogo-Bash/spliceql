@@ -69,6 +69,9 @@ pub enum TokenKind {
     Fasta,
     Bed,
     Cram,
+    // Output-only sink formats.
+    Json,
+    Tsv,
     Variants,
     Cnv,
     Coverage,
@@ -142,6 +145,8 @@ impl fmt::Display for TokenKind {
             Self::Fasta => f.write_str("FASTA"),
             Self::Bed => f.write_str("BED"),
             Self::Cram => f.write_str("CRAM"),
+            Self::Json => f.write_str("JSON"),
+            Self::Tsv => f.write_str("TSV"),
             Self::Variants => f.write_str("VARIANTS"),
             Self::Cnv => f.write_str("CNV"),
             Self::Coverage => f.write_str("COVERAGE"),

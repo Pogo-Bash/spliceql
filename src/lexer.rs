@@ -490,6 +490,8 @@ fn match_kw_3(t: &str) -> Option<TokenKind> {
         Some(TokenKind::Bed)
     } else if eq_ci(t, b"CNV") {
         Some(TokenKind::Cnv)
+    } else if eq_ci(t, b"TSV") {
+        Some(TokenKind::Tsv)
     } else {
         None
     }
@@ -508,6 +510,8 @@ fn match_kw_4(t: &str) -> Option<TokenKind> {
         Some(TokenKind::Desc)
     } else if eq_ci(t, b"CRAM") {
         Some(TokenKind::Cram)
+    } else if eq_ci(t, b"JSON") {
+        Some(TokenKind::Json)
     } else if eq_ci(t, b"TRUE") {
         Some(TokenKind::BoolLit(true))
     } else {
