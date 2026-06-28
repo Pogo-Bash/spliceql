@@ -36,13 +36,45 @@ pub struct Query {
 
 // ── Clauses ──────────────────────────────────────────────────────────────────
 
-/// `FROM <format> "<path>" [AS <alias>]`.
+/// `FROM <format> "<path>" [AS <alias>] [ISEC <format> "<path>" [MODE <mode>]]`.
+///
+/// The optional `isec` field turns the `FROM` into a two-input VCF set
+/// operation (see [`IsecClause`]); when `None` this is an ordinary single
+/// source.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FromClause {
     pub format: Format,
     pub path: String,
     pub alias: Option<String>,
+    pub isec: Option<IsecClause>,
     pub span: Span,
+}
+
+/// `ISEC <format> "<path>" [MODE <mode>]` — the second input and partition of a
+/// VCF set operation. Records of the two inputs are matched on the exact
+/// `(chrom, pos, ref, alt)` key (bcftools-isec semantics).
+#[derive(Debug, Clone, PartialEq)]
+pub struct IsecClause {
+    pub format: Format,
+    pub path: String,
+    pub mode: IsecMode,
+    pub span: Span,
+}
+
+/// Which partition a VCF `ISEC` emits. Mirrors the files `bcftools isec -p`
+/// produces. `Shared` is the default when no `MODE` is given.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IsecMode {
+    /// Records private to the first (`A`) input — bcftools `0000.vcf`.
+    PrivateA,
+    /// Records private to the second (`B`) input — bcftools `0001.vcf`.
+    PrivateB,
+    /// Shared records, taken from `A` — bcftools `0002.vcf` (the default).
+    Shared,
+    /// Shared records, taken from `B` — bcftools `0003.vcf`.
+    SharedB,
+    /// All records: `A` plus the `B`-private records.
+    Union,
 }
 
 /// `CALL <operation>` — `operation` is one of the validated operation names

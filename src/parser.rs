@@ -353,11 +353,149 @@ impl Parser {
             None
         };
 
+        // Optional VCF set-operation join. Two surfaces lower to the same
+        // `IsecClause` (and the same set-op engine):
+        //   * `ISEC <format> "<path>" [MODE <mode>]`           (general)
+        //   * `PAIRED WITH <format> "<path>" [MODE <mode>]`    (tumor/normal)
+        let isec = if self.at(TokenKind::Isec) {
+            Some(self.parse_isec()?)
+        } else if self.at(TokenKind::Paired) {
+            Some(self.parse_paired()?)
+        } else {
+            None
+        };
+
         let end = self.prev_end();
         Ok(FromClause {
             format,
             path,
             alias,
+            isec,
+            span: Span::new(start, end),
+        })
+    }
+
+    /// Parse `ISEC <format> "<path>" [MODE <mode>]` (the current token is `ISEC`).
+    fn parse_isec(&mut self) -> Result<IsecClause, ParseError> {
+        let start = self.peek().span.start;
+        self.expect(TokenKind::Isec)?;
+
+        let fmt_span = self.peek().span;
+        let fmt_kind = self.peek().kind.clone();
+        let format = match Self::format_from_kind(&fmt_kind) {
+            Some(f) => {
+                self.advance();
+                f
+            }
+            None if fmt_kind == TokenKind::Eof => {
+                return Err(ParseError::UnexpectedEof {
+                    expected: "a file format (BAM, VCF, FASTA, BED, CRAM)".to_string(),
+                    span: fmt_span,
+                });
+            }
+            None => {
+                return Err(ParseError::InvalidFormat {
+                    got: format!("{fmt_kind}"),
+                    span: fmt_span,
+                });
+            }
+        };
+
+        let (path, _) = self.expect_path("a file path string or $variable")?;
+
+        // Optional `MODE <ident>`; defaults to `shared` (the intersection).
+        let mode = if self.at(TokenKind::Mode) {
+            self.advance();
+            let (name, name_span) = self.expect_ident("a set-operation mode")?;
+            match name.to_ascii_lowercase().as_str() {
+                "private_a" | "privatea" => IsecMode::PrivateA,
+                "private_b" | "privateb" => IsecMode::PrivateB,
+                "shared" | "intersect" => IsecMode::Shared,
+                "shared_b" | "sharedb" => IsecMode::SharedB,
+                "union" => IsecMode::Union,
+                other => {
+                    return Err(ParseError::UnexpectedToken {
+                        expected: "one of: shared, shared_b, private_a, private_b, union"
+                            .to_string(),
+                        got: TokenKind::Ident(other.to_string()),
+                        span: name_span,
+                    });
+                }
+            }
+        } else {
+            IsecMode::Shared
+        };
+
+        let end = self.prev_end();
+        Ok(IsecClause {
+            format,
+            path,
+            mode,
+            span: Span::new(start, end),
+        })
+    }
+
+    /// Parse `PAIRED WITH <format> "<path>" [MODE somatic|germline]` (the
+    /// current token is `PAIRED`). This is tumor/normal somatic calling
+    /// expressed as a VCF set operation: the first source is the TUMOR (`A`),
+    /// the paired source is the NORMAL (`B`). It lowers to the *same*
+    /// [`IsecClause`] / set-op engine as `ISEC`:
+    ///   * `MODE somatic` (the default) → [`IsecMode::PrivateA`] — variants
+    ///     present in the tumor but absent from the normal.
+    ///   * `MODE germline`              → [`IsecMode::Shared`] — variants the
+    ///     tumor shares with the normal.
+    fn parse_paired(&mut self) -> Result<IsecClause, ParseError> {
+        let start = self.peek().span.start;
+        self.expect(TokenKind::Paired)?;
+        self.expect(TokenKind::With)?;
+
+        let fmt_span = self.peek().span;
+        let fmt_kind = self.peek().kind.clone();
+        let format = match Self::format_from_kind(&fmt_kind) {
+            Some(f) => {
+                self.advance();
+                f
+            }
+            None if fmt_kind == TokenKind::Eof => {
+                return Err(ParseError::UnexpectedEof {
+                    expected: "a file format (BAM, VCF, FASTA, BED, CRAM)".to_string(),
+                    span: fmt_span,
+                });
+            }
+            None => {
+                return Err(ParseError::InvalidFormat {
+                    got: format!("{fmt_kind}"),
+                    span: fmt_span,
+                });
+            }
+        };
+
+        let (path, _) = self.expect_path("a file path string or $variable")?;
+
+        // Optional `MODE somatic|germline`; defaults to `somatic` (tumor-private).
+        let mode = if self.at(TokenKind::Mode) {
+            self.advance();
+            let (name, name_span) = self.expect_ident("a somatic mode")?;
+            match name.to_ascii_lowercase().as_str() {
+                "somatic" | "tumor_only" | "tumoronly" => IsecMode::PrivateA,
+                "germline" | "shared" => IsecMode::Shared,
+                other => {
+                    return Err(ParseError::UnexpectedToken {
+                        expected: "one of: somatic, germline".to_string(),
+                        got: TokenKind::Ident(other.to_string()),
+                        span: name_span,
+                    });
+                }
+            }
+        } else {
+            IsecMode::PrivateA
+        };
+
+        let end = self.prev_end();
+        Ok(IsecClause {
+            format,
+            path,
+            mode,
             span: Span::new(start, end),
         })
     }
