@@ -27,6 +27,7 @@ pub struct Query {
     pub filter: Option<Expr>, // WHERE
     pub call: Option<CallClause>,
     pub with: Option<Vec<(String, Expr)>>,
+    pub annotate: Option<AnnotateClause>,
     pub into: Option<IntoClause>,
     pub order: Option<Vec<OrderItem>>,
     pub limit: Option<Expr>,
@@ -49,6 +50,16 @@ pub struct FromClause {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallClause {
     pub operation: String,
+    pub span: Span,
+}
+
+/// `ANNOTATE WITH <key> = "<path>", ...` — names local annotation databases
+/// (e.g. `genes="model.gff3"`, `clinvar="clinvar.vcf.gz"`) to join each variant
+/// record against by genomic position. `params` preserves source order; each
+/// value is a string-literal path or a `$var`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AnnotateClause {
+    pub params: Vec<(String, Expr)>,
     pub span: Span,
 }
 

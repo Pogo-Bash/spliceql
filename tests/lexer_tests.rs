@@ -620,3 +620,11 @@ fn streaming_lexer() {
     let t5 = lexer.next_token().unwrap();
     assert_eq!(t5.kind, TokenKind::Eof);
 }
+
+#[test]
+fn annotate_keyword_is_case_insensitive() {
+    use spliceql::token::TokenKind;
+    for kw in ["ANNOTATE", "annotate", "Annotate"] {
+        assert_eq!(kinds(kw), vec![TokenKind::Annotate]);
+    }
+}

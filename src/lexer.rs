@@ -554,6 +554,8 @@ fn match_kw_8(t: &str) -> Option<TokenKind> {
         Some(TokenKind::Variants)
     } else if eq_ci(t, b"COVERAGE") {
         Some(TokenKind::Coverage)
+    } else if eq_ci(t, b"ANNOTATE") {
+        Some(TokenKind::Annotate)
     } else {
         None
     }

@@ -453,3 +453,30 @@ fn byte_offset_to_line_col_basic() {
     assert_eq!(byte_offset_to_line_col(src, 5), (1, 6)); // 'b' in bam
     assert_eq!(byte_offset_to_line_col(src, 9), (2, 1)); // 'W' on line 2
 }
+
+// ── ANNOTATE clause (Track 1) ─────────────────────────────────────────────────
+
+#[test]
+fn annotate_clause_parses_database_paths() {
+    let q = ok(r#"FROM vcf "in.vcf" ANNOTATE WITH genes="g.gff3", clinvar="c.vcf.gz""#);
+    let ann = q.annotate.expect("ANNOTATE clause present");
+    assert_eq!(ann.params.len(), 2);
+    assert_eq!(ann.params[0].0, "genes");
+    assert!(matches!(&ann.params[0].1, Expr::StringLit(s, _) if s == "g.gff3"));
+    assert_eq!(ann.params[1].0, "clinvar");
+    assert!(matches!(&ann.params[1].1, Expr::StringLit(s, _) if s == "c.vcf.gz"));
+}
+
+#[test]
+fn annotate_clause_is_order_independent() {
+    let q = ok(r#"FROM vcf "in.vcf" ANNOTATE WITH genes="g.gff3" WHERE gene = "EGFR""#);
+    assert!(q.annotate.is_some());
+    assert!(q.filter.is_some());
+}
+
+#[test]
+fn annotate_clause_accepts_var_path() {
+    let q = ok(r#"FROM vcf "in.vcf" ANNOTATE WITH clinvar=$db"#);
+    let ann = q.annotate.expect("ANNOTATE present");
+    assert!(matches!(&ann.params[0].1, Expr::Var(name, _) if name == "db"));
+}

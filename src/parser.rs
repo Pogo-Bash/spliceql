@@ -269,6 +269,7 @@ impl Parser {
         let mut filter = None;
         let mut call = None;
         let mut with = None;
+        let mut annotate = None;
         let mut into = None;
         let mut order = None;
         let mut limit = None;
@@ -281,6 +282,7 @@ impl Parser {
                 TokenKind::Where | TokenKind::Filter => filter = Some(self.parse_where()?),
                 TokenKind::Call => call = Some(self.parse_call()?),
                 TokenKind::With => with = Some(self.parse_with()?),
+                TokenKind::Annotate => annotate = Some(self.parse_annotate()?),
                 TokenKind::Into => into = Some(self.parse_into()?),
                 TokenKind::Order => order = Some(self.parse_order()?),
                 TokenKind::Limit => limit = Some(self.parse_limit()?),
@@ -292,7 +294,7 @@ impl Parser {
                 TokenKind::Eof => break,
                 other => {
                     return Err(ParseError::UnexpectedToken {
-                        expected: "a clause keyword (SELECT, WHERE, CALL, WITH, INTO, ORDER, LIMIT)"
+                        expected: "a clause keyword (SELECT, WHERE, CALL, WITH, ANNOTATE, INTO, ORDER, LIMIT)"
                             .to_string(),
                         got: other,
                         span: self.peek().span,
@@ -308,6 +310,7 @@ impl Parser {
             filter,
             call,
             with,
+            annotate,
             into,
             order,
             limit,
@@ -477,6 +480,34 @@ impl Parser {
             }
         }
         Ok(pairs)
+    }
+
+    /// Parse `ANNOTATE WITH key = "path", key = "path", ...`.
+    ///
+    /// Shares the `key = value` pair shape with [`Self::parse_with`], but the
+    /// values are annotation-database paths (string literals or `$vars`) rather
+    /// than CALL-tuning scalars, and the pairs hang off a dedicated clause.
+    fn parse_annotate(&mut self) -> Result<AnnotateClause, ParseError> {
+        let start = self.peek().span.start;
+        self.expect(TokenKind::Annotate)?;
+        self.expect(TokenKind::With)?;
+        let mut params = Vec::new();
+        loop {
+            let (key, _) = self.expect_ident("an annotation database name")?;
+            self.expect(TokenKind::Eq)?;
+            let value = self.parse_expr(0)?;
+            params.push((key, value));
+            if self.at(TokenKind::Comma) {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+        let end = self.prev_end();
+        Ok(AnnotateClause {
+            params,
+            span: Span::new(start, end),
+        })
     }
 
     fn parse_order(&mut self) -> Result<Vec<OrderItem>, ParseError> {
