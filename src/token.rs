@@ -77,6 +77,10 @@ pub enum TokenKind {
     Coverage,
     Reads,
     Header,
+    /// VCF set operation join: `FROM vcf "a" ISEC vcf "b"`.
+    Isec,
+    /// Selects the set-operation partition: `MODE shared`.
+    Mode,
 
     // ── Literals ──
     StringLit(String),
@@ -152,6 +156,8 @@ impl fmt::Display for TokenKind {
             Self::Coverage => f.write_str("COVERAGE"),
             Self::Reads => f.write_str("READS"),
             Self::Header => f.write_str("HEADER"),
+            Self::Isec => f.write_str("ISEC"),
+            Self::Mode => f.write_str("MODE"),
 
             Self::StringLit(s) => write!(f, "\"{s}\""),
             Self::IntLit(n) => write!(f, "{n}"),

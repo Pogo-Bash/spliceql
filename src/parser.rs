@@ -350,11 +350,79 @@ impl Parser {
             None
         };
 
+        // Optional VCF set-operation join: `ISEC <format> "<path>" [MODE <mode>]`.
+        let isec = if self.at(TokenKind::Isec) {
+            Some(self.parse_isec()?)
+        } else {
+            None
+        };
+
         let end = self.prev_end();
         Ok(FromClause {
             format,
             path,
             alias,
+            isec,
+            span: Span::new(start, end),
+        })
+    }
+
+    /// Parse `ISEC <format> "<path>" [MODE <mode>]` (the current token is `ISEC`).
+    fn parse_isec(&mut self) -> Result<IsecClause, ParseError> {
+        let start = self.peek().span.start;
+        self.expect(TokenKind::Isec)?;
+
+        let fmt_span = self.peek().span;
+        let fmt_kind = self.peek().kind.clone();
+        let format = match Self::format_from_kind(&fmt_kind) {
+            Some(f) => {
+                self.advance();
+                f
+            }
+            None if fmt_kind == TokenKind::Eof => {
+                return Err(ParseError::UnexpectedEof {
+                    expected: "a file format (BAM, VCF, FASTA, BED, CRAM)".to_string(),
+                    span: fmt_span,
+                });
+            }
+            None => {
+                return Err(ParseError::InvalidFormat {
+                    got: format!("{fmt_kind}"),
+                    span: fmt_span,
+                });
+            }
+        };
+
+        let (path, _) = self.expect_path("a file path string or $variable")?;
+
+        // Optional `MODE <ident>`; defaults to `shared` (the intersection).
+        let mode = if self.at(TokenKind::Mode) {
+            self.advance();
+            let (name, name_span) = self.expect_ident("a set-operation mode")?;
+            match name.to_ascii_lowercase().as_str() {
+                "private_a" | "privatea" => IsecMode::PrivateA,
+                "private_b" | "privateb" => IsecMode::PrivateB,
+                "shared" | "intersect" => IsecMode::Shared,
+                "shared_b" | "sharedb" => IsecMode::SharedB,
+                "union" => IsecMode::Union,
+                other => {
+                    return Err(ParseError::UnexpectedToken {
+                        expected: "one of: shared, shared_b, private_a, private_b, union"
+                            .to_string(),
+                        got: TokenKind::Ident(other.to_string()),
+                        span: name_span,
+                    });
+                }
+            }
+        } else {
+            IsecMode::Shared
+        };
+
+        let end = self.prev_end();
+        Ok(IsecClause {
+            format,
+            path,
+            mode,
             span: Span::new(start, end),
         })
     }

@@ -453,3 +453,43 @@ fn byte_offset_to_line_col_basic() {
     assert_eq!(byte_offset_to_line_col(src, 5), (1, 6)); // 'b' in bam
     assert_eq!(byte_offset_to_line_col(src, 9), (2, 1)); // 'W' on line 2
 }
+
+// ── VCF set operations (ISEC) ────────────────────────────────────────────────
+
+#[test]
+fn isec_parses_second_source_default_shared() {
+    let q = ok(r#"FROM vcf "a.vcf.gz" ISEC vcf "b.vcf.gz""#);
+    assert_eq!(q.from.format, Format::Vcf);
+    assert_eq!(q.from.path, "a.vcf.gz");
+    let isec = q.from.isec.expect("ISEC clause present");
+    assert_eq!(isec.format, Format::Vcf);
+    assert_eq!(isec.path, "b.vcf.gz");
+    assert_eq!(isec.mode, IsecMode::Shared, "default mode is shared/intersect");
+}
+
+#[test]
+fn isec_parses_explicit_modes() {
+    let cases = [
+        ("private_a", IsecMode::PrivateA),
+        ("private_b", IsecMode::PrivateB),
+        ("shared", IsecMode::Shared),
+        ("shared_b", IsecMode::SharedB),
+        ("union", IsecMode::Union),
+    ];
+    for (kw, expected) in cases {
+        let src = format!(r#"FROM vcf "a" ISEC vcf "b" MODE {kw}"#);
+        let q = ok(&src);
+        assert_eq!(q.from.isec.unwrap().mode, expected, "mode {kw}");
+    }
+}
+
+#[test]
+fn isec_rejects_unknown_mode() {
+    err(r#"FROM vcf "a" ISEC vcf "b" MODE bogus"#);
+}
+
+#[test]
+fn no_isec_leaves_field_none() {
+    let q = ok(r#"FROM vcf "a.vcf""#);
+    assert!(q.from.isec.is_none());
+}

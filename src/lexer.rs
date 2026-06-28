@@ -512,6 +512,10 @@ fn match_kw_4(t: &str) -> Option<TokenKind> {
         Some(TokenKind::Cram)
     } else if eq_ci(t, b"JSON") {
         Some(TokenKind::Json)
+    } else if eq_ci(t, b"ISEC") {
+        Some(TokenKind::Isec)
+    } else if eq_ci(t, b"MODE") {
+        Some(TokenKind::Mode)
     } else if eq_ci(t, b"TRUE") {
         Some(TokenKind::BoolLit(true))
     } else {
