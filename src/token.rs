@@ -79,6 +79,8 @@ pub enum TokenKind {
     Header,
     /// VCF set operation join: `FROM vcf "a" ISEC vcf "b"`.
     Isec,
+    /// Tumor/normal somatic join: `FROM vcf "tumor" PAIRED WITH vcf "normal"`.
+    Paired,
     /// Selects the set-operation partition: `MODE shared`.
     Mode,
 
@@ -157,6 +159,7 @@ impl fmt::Display for TokenKind {
             Self::Reads => f.write_str("READS"),
             Self::Header => f.write_str("HEADER"),
             Self::Isec => f.write_str("ISEC"),
+            Self::Paired => f.write_str("PAIRED"),
             Self::Mode => f.write_str("MODE"),
 
             Self::StringLit(s) => write!(f, "\"{s}\""),

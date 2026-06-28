@@ -548,6 +548,8 @@ fn match_kw_6(t: &str) -> Option<TokenKind> {
         Some(TokenKind::Filter)
     } else if eq_ci(t, b"HEADER") {
         Some(TokenKind::Header)
+    } else if eq_ci(t, b"PAIRED") {
+        Some(TokenKind::Paired)
     } else {
         None
     }

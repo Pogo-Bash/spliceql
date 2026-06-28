@@ -493,3 +493,44 @@ fn no_isec_leaves_field_none() {
     let q = ok(r#"FROM vcf "a.vcf""#);
     assert!(q.from.isec.is_none());
 }
+
+// ── Tumor/normal somatic (PAIRED WITH) ───────────────────────────────────────
+
+#[test]
+fn paired_with_defaults_to_somatic_private_a() {
+    let q = ok(r#"FROM vcf "tumor.vcf.gz" PAIRED WITH vcf "normal.vcf.gz""#);
+    assert_eq!(q.from.format, Format::Vcf);
+    assert_eq!(q.from.path, "tumor.vcf.gz");
+    let isec = q.from.isec.expect("PAIRED WITH lowers to an ISEC clause");
+    assert_eq!(isec.format, Format::Vcf);
+    assert_eq!(isec.path, "normal.vcf.gz");
+    assert_eq!(
+        isec.mode,
+        IsecMode::PrivateA,
+        "default somatic = tumor-private (private_a)"
+    );
+}
+
+#[test]
+fn paired_with_explicit_modes() {
+    let cases = [
+        ("somatic", IsecMode::PrivateA),
+        ("tumor_only", IsecMode::PrivateA),
+        ("germline", IsecMode::Shared),
+    ];
+    for (kw, expected) in cases {
+        let src = format!(r#"FROM vcf "tumor" PAIRED WITH vcf "normal" MODE {kw}"#);
+        let q = ok(&src);
+        assert_eq!(q.from.isec.unwrap().mode, expected, "mode {kw}");
+    }
+}
+
+#[test]
+fn paired_with_rejects_unknown_mode() {
+    err(r#"FROM vcf "tumor" PAIRED WITH vcf "normal" MODE bogus"#);
+}
+
+#[test]
+fn paired_without_with_keyword_is_an_error() {
+    err(r#"FROM vcf "tumor" PAIRED vcf "normal""#);
+}
