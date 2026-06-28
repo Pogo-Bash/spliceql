@@ -273,6 +273,7 @@ impl Parser {
         let mut into = None;
         let mut order = None;
         let mut limit = None;
+        let mut split = false;
 
         loop {
             // Clone the kind so the match body can borrow `self` mutably.
@@ -286,6 +287,11 @@ impl Parser {
                 TokenKind::Into => into = Some(self.parse_into()?),
                 TokenKind::Order => order = Some(self.parse_order()?),
                 TokenKind::Limit => limit = Some(self.parse_limit()?),
+                // `SPLIT` is a bare flag clause (no payload): multi-allelic split.
+                TokenKind::Split => {
+                    self.advance();
+                    split = true;
+                }
                 // A bare `;` terminates the query; tolerate a trailing one.
                 TokenKind::Semicolon => {
                     self.advance();
@@ -294,7 +300,7 @@ impl Parser {
                 TokenKind::Eof => break,
                 other => {
                     return Err(ParseError::UnexpectedToken {
-                        expected: "a clause keyword (SELECT, WHERE, CALL, WITH, ANNOTATE, INTO, ORDER, LIMIT)"
+                        expected: "a clause keyword (SELECT, WHERE, CALL, WITH, ANNOTATE, INTO, ORDER, LIMIT, SPLIT)"
                             .to_string(),
                         got: other,
                         span: self.peek().span,
@@ -314,6 +320,7 @@ impl Parser {
             into,
             order,
             limit,
+            split,
             span: Span::new(start, end),
         })
     }

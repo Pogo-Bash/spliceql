@@ -31,6 +31,9 @@ pub struct Query {
     pub into: Option<IntoClause>,
     pub order: Option<Vec<OrderItem>>,
     pub limit: Option<Expr>,
+    /// `SPLIT` present: decompose multi-allelic VCF records into biallelic rows
+    /// on load (`bcftools norm -m -` style). A bare flag clause with no payload.
+    pub split: bool,
     pub span: Span,
 }
 
