@@ -62,6 +62,8 @@ pub enum TokenKind {
     By,
     Asc,
     Desc,
+    /// `SPLIT` — decompose multi-allelic VCF records into biallelic rows on load.
+    Split,
 
     // ── Genomic keywords ──
     Bam,
@@ -139,6 +141,7 @@ impl fmt::Display for TokenKind {
             Self::By => f.write_str("BY"),
             Self::Asc => f.write_str("ASC"),
             Self::Desc => f.write_str("DESC"),
+            Self::Split => f.write_str("SPLIT"),
 
             Self::Bam => f.write_str("BAM"),
             Self::Vcf => f.write_str("VCF"),

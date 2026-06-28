@@ -530,6 +530,8 @@ fn match_kw_5(t: &str) -> Option<TokenKind> {
         Some(TokenKind::Fasta)
     } else if eq_ci(t, b"READS") {
         Some(TokenKind::Reads)
+    } else if eq_ci(t, b"SPLIT") {
+        Some(TokenKind::Split)
     } else if eq_ci(t, b"FALSE") {
         Some(TokenKind::BoolLit(false))
     } else {
