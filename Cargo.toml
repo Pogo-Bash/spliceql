@@ -1,6 +1,6 @@
 [package]
 name = "spliceql"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "SpliceQL query language frontend for CodonSplice — lexer, parser, AST, bytecode compiler"
 license = "MIT"
